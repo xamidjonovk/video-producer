@@ -33,7 +33,7 @@ def summary(item):
     return result
 
 
-def collect(project, url, limit, downloader, download=False, encoder=None):
+def collect(project, url, limit, downloader, download=False, encoder=None, brief=False):
     supplied_url = url
     original_path = urlsplit(url).path.rstrip('/')
     url = canonical_url(url)
@@ -88,5 +88,9 @@ def collect(project, url, limit, downloader, download=False, encoder=None):
             except ValueError as error:
                 report['download_error'] = str(error)[-1500:]
         save_json(report_path, report)
-    print(json.dumps({'report': str(report_path), **report}, ensure_ascii=False))
+    receipt = {'report': str(report_path), **report}
+    if brief:
+        receipt['videos'] = [{key: item[key] for key in ('id', 'title', 'duration', 'view_count', 'url') if key in item}
+                             for item in report['videos']]
+    print(json.dumps(receipt, ensure_ascii=False))
     return 0 if report['access'] == 'available' and 'download_error' not in report else 2

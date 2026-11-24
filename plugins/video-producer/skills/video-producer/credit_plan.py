@@ -31,7 +31,12 @@ def check(plan):
             raise ValueError('Every line needs a unique, non-empty shot ID.')
         if type(count) is not int or count < 1:
             raise ValueError(f'{name}: count must be a positive integer.')
-        amounts[name] = credits(shot['quoted_credits'], name) * count
+        if 'quoted_total' in shot:
+            if 'quoted_credits' in shot:
+                raise ValueError(f'{name}: use either a request total or a unit price.')
+            amounts[name] = credits(shot['quoted_total'], name)
+        else:
+            amounts[name] = credits(shot['quoted_credits'], name) * count
     planned = sum(amounts.values())
     remaining = cap - spent - reserve - planned
     return {'cap': cap, 'spent': spent, 'reserve': reserve, 'planned': planned,

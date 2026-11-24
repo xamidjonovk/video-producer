@@ -70,7 +70,11 @@ def loudness_filter(target, peak, measured=None):
 def measure_loudness(run, executable, path, target, peak):
     result = run(executable, '-nostdin', '-hide_banner', '-i', path, '-vn',
                  '-af', loudness_filter(target, peak), '-f', 'null', '-')
-    match = re.search(r'\{\s*"input_i"\s*:.*?\}', result.stderr, re.DOTALL)
+    return read_loudness(result.stderr)
+
+
+def read_loudness(log):
+    match = re.search(r'\{\s*"input_i"\s*:.*?\}', log, re.DOTALL)
     if not match:
         raise ValueError('FFmpeg did not report loudness for the audio stream.')
     data = json.loads(match.group())
@@ -79,10 +83,23 @@ def measure_loudness(run, executable, path, target, peak):
     return {key: value if math.isfinite(value) else None for key, value in values.items()}
 
 
-def measure_picture(run, executable, path):
-    measurement = run(executable, '-nostdin', '-hide_banner', '-i', path, '-an',
+def inspect_export(run, executable, path, mastering):
+    audio = []
+    if mastering:
+        target = mastering['target_lufs']
+        peak = mastering['true_peak_limit_dbtp']
+        audio = ['-af', loudness_filter(target, peak)]
+    measurement = run(executable, '-nostdin', '-hide_banner', '-nostats', '-xerror', '-i', path,
+                      '-map', '0:v:0', '-map', '0:a:0', *audio,
                       '-vf', 'fps=1:start_time=0:round=up,signalstats,metadata=mode=print:file=-',
                       '-f', 'null', '-')
+    if mastering:
+        measured = read_loudness(measurement.stderr)
+        integrated, true_peak = measured['input_i'], measured['input_tp']
+        mastering['export'] = measured
+        mastering['status'] = ('no_measurable_audio' if integrated is None else 'review'
+                               if abs(integrated - target) > 1.5 or true_peak is None or true_peak > peak + 0.1
+                               else 'pass')
     values = re.findall(r'lavfi\.signalstats\.YAVG=([\d.]+)', measurement.stdout)
     if not values:
         return {'samples': 0}

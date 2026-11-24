@@ -1,0 +1,4 @@
+interface:
+  display_name: "Higgsfield Shots"
+  short_description: "Direct and budget individual AI video shots"
+  default_prompt: "Use $higgsfield-shots to plan a consistent talking shot and quote one take."

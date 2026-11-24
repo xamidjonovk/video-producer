@@ -28,7 +28,7 @@ class ReferenceWorkflowTests(unittest.TestCase):
                 "assert '--ignore-config' in args and '--skip-download' in args\n"
                 "assert args[args.index('--playlist-end') + 1] == '2'\n"
                 "print(json.dumps({'entries':[{'id': str(i), 'title': 'Example', "
-                "'url': 'https://youtu.be/dQw4w9WgXcQ', 'view_count': i} for i in range(5)]}))\n",
+                "'url': 'https://youtu.be/dQw4w9WgXcQ', 'description': 'full evidence', 'view_count': i} for i in range(5)]}))\n",
                 encoding="utf-8",
             )
             output = io.StringIO()
@@ -41,6 +41,16 @@ class ReferenceWorkflowTests(unittest.TestCase):
             self.assertEqual(len(receipt["videos"]), 2)
             self.assertEqual(receipt["videos"][0]["url"], "https://www.youtube.com/watch?v=dQw4w9WgXcQ")
             self.assertTrue(Path(receipt["report"]).is_file())
+            compact = io.StringIO()
+            with contextlib.redirect_stdout(compact):
+                collect(project, "https://www.youtube.com/@Test/shorts", 2,
+                        [sys.executable, str(fixture)], brief=True)
+            brief = json.loads(compact.getvalue())
+            self.assertNotIn("description", brief["videos"][0])
+            self.assertEqual(receipt["videos"][0]["description"], "full evidence")
+            self.assertEqual([item["id"] for item in brief["videos"]], ["0", "1"])
+            full = json.loads(Path(brief["report"]).read_text(encoding="utf-8"))
+            self.assertEqual(full["videos"], receipt["videos"])
             with self.assertRaisesRegex(ValueError, "single authorized video"):
                 collect(project, "https://www.instagram.com/test/reels/", 5,
                         [sys.executable, str(fixture)], download=True)

@@ -6,7 +6,7 @@ Set a mild project grade or per-clip `grade` when a visual check justifies it. S
 
 Keep spoken audio intelligible. Time cues to actions, use room tone where a cut needs continuity, and add Foley where it supports the image. Label additional audio as `dialogue`, `music`, `ambience`, or `foley` in the edit plan. Use `start`, `source_start`, `duration`, `fade_in`, `fade_out` and `gain` as needed. For a missing effect, `vp.py sfx <project> "a soft paper rustle" <job>/assets/paper.wav` can prepare and use Earshot locally. Verify the cue against the picture.
 
-New local edit plans use a configurable -16 LUFS and -1 dBTP master and duck music behind foreground audio. Measure the encoded AAC output and inspect `technical-review.json`. Fix missed loudness or peak limits when it shows `review`. Confirm intentional silence before delivery when it shows `no_measurable_audio`. At normal playback speed check voice, music balance, lip sync, effect timing, edits and colors. Record issues at the timecode and rerender after changes.
+New local edit plans use a configurable -16 LUFS and -1 dBTP master and duck music behind foreground audio. The renderer applies constant gain when the measured mix has enough true-peak headroom, preserving its dynamics. It uses loudnorm when reaching the target needs peak control. Inspect the encoded AAC measurements in `technical-review.json`. Fix missed loudness or peak limits when it shows `review`. Confirm intentional silence before delivery when it shows `no_measurable_audio`. At normal playback speed check voice, music balance, lip sync, effect timing, edits and colors. Record issues at the timecode and rerender after changes.
 
 ```json
 {

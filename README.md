@@ -75,6 +75,14 @@ New edit plans support Rec.709 SDR delivery, tagged HDR tone mapping, clip-level
 
 ## External accounts and media
 
+### Spend less on revisions
+
+Version 0.4.0 bundles **Higgsfield Shots** for projects that need generated footage. Both marketplace hosts and the local installer include it alongside Video Producer. A brief can mix an existing performance with a single generated insert. Keep the original dialogue, approve the hardest shot first, and fix trim, captions, color or sound on the accepted take in the editor. [Shot direction and credit receipts](plugins/video-producer/skills/higgsfield-shots/SKILL.md).
+
+The agent requests a live quote and records a hold before submitting each paid take. Pending holds consume the shared job budget, including after a lost response. Completed takes carry provider IDs and a review note. To inspect a job, run `python plugins/video-producer/skills/higgsfield-shots/takes.py <job> status`. A quote by itself spends zero credits.
+
+For reference-heavy briefs the agent uses `vp.py reference <project> <url> --brief`. This prints the fields needed to shortlist clips and keeps the fuller report in the project. Revision handoffs carry the affected shot IDs, decisions and file locations. Final exports use one complete audio/video decode for corruption checks, sampled luma and optional measured loudness/true peak. A measured constant gain preserves natural dynamics when the mix has enough headroom for AAC encoding.
+
 Higgsfield, ElevenLabs, vidIQ and other account-based connectors use the host's official connection flow. Paid generations use the project budget and a live quote. Add personal research handles in your own project's `watchlist.local.json` with the structure of the bundled [watchlist](plugins/video-producer/skills/video-producer/watchlist.json).
 
 The Video Producer code and templates use the [MIT license](LICENSE). Third-party software, providers, sample assets and styles follow their respective terms. The [tool selection guide](plugins/video-producer/skills/video-producer/references/tools.md) links to the upstream terms and handles commercial-use cases.

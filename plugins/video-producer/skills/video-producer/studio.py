@@ -11,7 +11,7 @@ import tempfile
 from pathlib import Path
 
 from finishing import (REC709_TAGS, TRACK_GAINS, color_filters, color_source, loudness_filter,
-                       measure_loudness, measure_picture)
+                       measure_loudness, inspect_export)
 
 
 MODES = ('auto', 'motion', 'cinematic', 'broll', 'iphone', 'repurpose')
@@ -291,7 +291,8 @@ def assemble(job, plan, stage, output, duration):
         mix = stage / 'mix.wav'
         graph = ['-filter_complex', ';'.join(filters)] if filters else []
         ffmpeg(*inputs, *graph, '-map', audio_map, '-t', f'{duration:.8f}', '-c:a', 'pcm_f32le', mix, cwd=stage)
-        measured = measure_loudness(run, command_path('ffmpeg'), mix, target, peak)
+        encode_peak = peak - 0.7
+        measured = measure_loudness(run, command_path('ffmpeg'), mix, target, encode_peak)
         inputs = ['-f', 'concat', '-safe', '1', '-i', 'clips.txt', '-i', mix]
         filters = []
         audio_map = '1:a:0'
@@ -301,7 +302,13 @@ def assemble(job, plan, stage, output, duration):
     if filters:
         audio_args += ['-filter_complex', ';'.join(filters)]
     if mastering and mastering['premaster']['input_i'] is not None:
-        audio_args += ['-af', loudness_filter(target, peak - 0.7, mastering['premaster'])]
+        gain_db = target - measured['input_i']
+        if measured['input_tp'] is not None and measured['input_tp'] + gain_db <= encode_peak:
+            audio_args += ['-af', f'volume={gain_db:.6f}dB:precision=double']
+            mastering['method'] = 'constant_gain'
+        else:
+            audio_args += ['-af', loudness_filter(target, encode_peak, measured)]
+            mastering['method'] = 'loudnorm'
     video_args = ['-c:v', 'copy']
     if plan.get('subtitles'):
         source = media_path(job, plan['subtitles'])
@@ -313,13 +320,6 @@ def assemble(job, plan, stage, output, duration):
                       '-preset', 'veryfast', '-crf', '17', '-pix_fmt', 'yuv420p']
     ffmpeg(*inputs, '-map', '0:v:0', *audio_args, '-map', audio_map, *video_args, *REC709_TAGS,
            '-t', f'{duration:.8f}', '-movflags', '+faststart', output, cwd=stage)
-    if mastering:
-        measured = measure_loudness(run, command_path('ffmpeg'), output, target, peak)
-        integrated, true_peak = measured['input_i'], measured['input_tp']
-        mastering['export'] = measured
-        mastering['status'] = ('no_measurable_audio' if integrated is None else 'review'
-                               if abs(integrated - target) > 1.5 or true_peak is None or true_peak > peak + 0.1
-                               else 'pass')
     return mastering
 
 
@@ -348,11 +348,11 @@ def render(args):
             raise ValueError('Eksportning kadr o‘lchami yoki audio oqimi mos kelmadi.')
         if abs(result['duration'] - duration) > 0.18:
             raise ValueError(f'Eksport davomiyligi mos kelmadi: {result["duration"]:.3f}s / {duration:.3f}s')
-        ffmpeg('-xerror', '-i', output, '-f', 'null', '-')
+        picture = inspect_export(run, command_path('ffmpeg'), output, mastering)
         result['technical_check'] = 'decoded'
         result['editorial_review'] = 'pending'
         result['color'] = {'output': 'Rec.709 SDR', 'clips': [review for _, review in clips],
-                           'picture': measure_picture(run, command_path('ffmpeg'), output)}
+                           'picture': picture}
         if mastering:
             result['audio_master'] = mastering
         save_json(stage / 'technical-review.json', result)

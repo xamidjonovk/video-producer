@@ -255,6 +255,7 @@ def main():
             command.add_argument("url")
             command.add_argument("--limit", type=int, default=8)
             command.add_argument("--download-authorized", action="store_true")
+            command.add_argument("--brief", action="store_true", help="Print short listings and save full metadata.")
         if name == "scenes":
             command.add_argument("source", type=Path)
             command.add_argument("output", type=Path)
@@ -285,7 +286,8 @@ def main():
             if not 1 <= args.limit <= 30:
                 raise ValueError("Use a sample size from 1 to 30.")
             return collect(project, args.url, args.limit, prepare_module(project, "yt_dlp", YT_DLP),
-                           args.download_authorized, ffmpeg(project) if args.download_authorized else None)
+                           args.download_authorized, ffmpeg(project) if args.download_authorized else None,
+                           brief=args.brief)
         elif args.command == "scenes":
             source = (project / args.source).resolve(strict=True)
             output = (project / args.output).resolve()

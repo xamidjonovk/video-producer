@@ -32,6 +32,7 @@ CHOICES = {
     "matte-if-needed": ("existing Resolve Magic Mask", "MatAnyone for soft edges", "SAM 2 for object tracking"),
     "composite": ("Resolve Fusion", "EffectCraft"),
     "reference-plates": ("original assets", "authorized image generation"),
+    "quote-if-needed": ("Higgsfield Shots for generated takes, live quotes and prior job receipts",),
     "cut-or-generate": ("owned footage or licensed stock", "Higgsfield or ElevenLabs video when authorized",
                         "existing ComfyUI workflow with compatible Wan or LTX model"),
     "voice-if-needed": ("original recording", "authorized ElevenLabs voice"),
