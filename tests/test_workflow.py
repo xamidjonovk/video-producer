@@ -42,6 +42,22 @@ class VideoProducerTests(unittest.TestCase):
         self.assertEqual(combined[-2:], ["verify", "package"])
         self.assertEqual(len(combined), len(set(combined)))
 
+    def test_motion_reel_locks_audio_and_maps_coverage_before_sync(self):
+        def stages(*workflows):
+            return [step["step"] for step in production_plan(workflows)]
+
+        plain = stages("motion-reel")
+        self.assertLess(plain.index("lock-dialogue"), plain.index("map-coverage"))
+        self.assertNotIn("sync-original-video", plain)
+        hybrid = stages("motion-reel", "presenter-clone")
+        self.assertEqual(hybrid, stages("presenter-clone", "motion-reel"))
+        self.assertEqual(len(hybrid), len(set(hybrid)))
+        self.assertNotIn("lock-dialogue", hybrid)
+        order = ["lock-presenter-audio", "map-coverage", "prepare-lipsync", "sync-original-video",
+                 "rough-cut", "balance-dialogue", "verify", "package"]
+        positions = [hybrid.index(step) for step in order]
+        self.assertEqual(positions, sorted(positions))
+
     def test_clip_captions_preserve_language_and_timing(self):
         items = [
             SimpleNamespace(start=0.25, end=1.533, text="  Assalomu   alaykum! "),

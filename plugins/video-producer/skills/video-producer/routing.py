@@ -1,6 +1,12 @@
 """Translate the agent's semantic production intent into an actionable workflow."""
 
 
+REEL_COVERAGE = ("map-coverage", "source-cutaways", "animate-explanation")
+REEL_FINISH = ("rough-cut", "balance-dialogue", "verify", "package")
+PRESENTER_AUDIO = ("inspect", "presenter-script", "lock-presenter-audio")
+PRESENTER_SYNC = ("prepare-lipsync", "sync-original-video")
+
+
 WORKFLOWS = {
     "raw-edit": ("inspect", "transcribe-if-needed", "rough-cut", "refine", "verify", "package"),
     "repurpose": ("inspect", "transcribe-if-needed", "select-complete-beats", "rough-cut", "reframe", "verify", "package"),
@@ -13,8 +19,8 @@ WORKFLOWS = {
     "one-shot": ("storyboard", "render-continuous", "verify", "package"),
     "composite": ("inspect", "matte-if-needed", "composite", "verify", "package"),
     "cinematic": ("storyboard", "reference-plates", "quote-if-needed", "cut-or-generate", "verify", "package"),
-    "presenter-clone": ("inspect", "presenter-script", "lock-presenter-audio", "prepare-lipsync",
-                        "sync-original-video", "rough-cut", "verify", "package"),
+    "motion-reel": ("inspect", "lock-dialogue", *REEL_COVERAGE, *REEL_FINISH),
+    "presenter-clone": (*PRESENTER_AUDIO, "map-coverage", *PRESENTER_SYNC, "rough-cut", "verify", "package"),
     "trend-research": ("research", "derive-original-hooks"),
     "publishing-draft": ("verify", "package"),
 }
@@ -25,6 +31,11 @@ CHOICES = {
     "transcribe-if-needed": ("existing transcript or captions", "faster-whisper", "ElevenLabs Scribe when authorized"),
     "rough-cut": ("existing NLE or Resolve", "local FFmpeg edit plan", "Ghost Editor for eligible macOS talking-head jobs"),
     "record-screen": ("existing recorder/OBS", "OpenScreen"),
+    "lock-dialogue": ("approved recording, script and timed captions",),
+    "map-coverage": ("timestamped beat sheet in the job's script.json", "source contact sheet"),
+    "source-cutaways": ("real product recording", "owned or licensed action footage with source and timecodes"),
+    "animate-explanation": ("HyperFrames for timed diagrams and UI callouts", "existing editable motion timeline"),
+    "balance-dialogue": ("speech-first mix with timed Foley", "FFmpeg loudness and true-peak measurement"),
     "render-html": ("HyperFrames",),
     "render-react": ("Remotion, subject to its license",),
     "choose-launch-engine": ("HyperFrames", "huashu-motion when custom scoring or annotated revisions justify it",
@@ -50,7 +61,14 @@ CHOICES = {
 
 
 def production_plan(workflows):
-    ordered = dict.fromkeys(step for name in workflows for step in WORKFLOWS[name])
+    workflows = tuple(workflows)
+    combined_reel = {"motion-reel", "presenter-clone"}
+    ordered = {}
+    for name in workflows:
+        steps = WORKFLOWS[name]
+        if name in combined_reel and combined_reel.issubset(workflows):
+            steps = (*PRESENTER_AUDIO, *REEL_COVERAGE, *PRESENTER_SYNC, *REEL_FINISH)
+        ordered.update(dict.fromkeys(steps))
     for step in ("verify", "package"):
         if step in ordered:
             ordered[step] = ordered.pop(step)

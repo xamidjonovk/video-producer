@@ -9,6 +9,8 @@ Understand the intent semantically. Use these examples for orientation. File typ
 | “O‘zbekcha subtitr qo‘sh” | `subtitles` | Reuse timed text first, then use local multilingual speech recognition or an authorized provider. Check names and translate only if requested. |
 | “Show how to use this app in 30 seconds” | `screen-demo` | Record a short real interaction or use the supplied demo clip. Clarify the workflow with captions or a minimal overlay. |
 | “Give this an animated title and captions” | `html-motion` | Reuse the native editor or select HTML motion when timed layers need a reusable coded effect. |
+| “Ovozimga mos, qiziqarli Reel tayyorla” | `motion-reel` | Lock the spoken take and map each idea to a visible action. Use the [first-cut playbook](motion-reel.md) to select product footage, B-roll and explanatory motion. |
+| “Tabiiyroq dubl qil, gapimga mos B-roll va motion qo‘sh” | `motion-reel presenter-clone` | Reuse approved narration, mark face windows, choose calm source footage and sync just those windows before the final mix. |
 | “Make a video from our dashboard data” | `react-motion` | Check the existing code and select a React/data or HTML renderer based on the actual assets and deliverable. |
 | “Produce a launch film for our product” | `launch-film` | Build a beat sheet and decide whether actual UI, kinetic graphics, custom scoring or generated shots contribute. |
 | “Explain this topic in under a minute” | `explainer` | Verify needed facts, write for speech, then choose the smallest compatible render and voice pipeline. |

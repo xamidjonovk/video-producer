@@ -34,6 +34,7 @@ def summary(item):
 
 
 def collect(project, url, limit, downloader, download=False, encoder=None, brief=False):
+    project = project.resolve(strict=True)
     supplied_url = url
     original_path = urlsplit(url).path.rstrip('/')
     url = canonical_url(url)
