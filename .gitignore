@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.video-producer/
+.venv/
+node_modules/
+.env
+.env.*
+studio.local.json
+watchlist.local.json
+jobs/
+exports/
+*.mp4
+*.mov
+*.wav
+*.zip

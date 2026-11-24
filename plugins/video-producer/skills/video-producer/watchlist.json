@@ -1,0 +1,12 @@
+{
+  "instagram": {
+    "idea_references": [],
+    "production_references": []
+  },
+  "news": {
+    "OpenAI News": "https://openai.com/news/",
+    "Anthropic News": "https://www.anthropic.com/news",
+    "Google DeepMind": "https://deepmind.google/blog/",
+    "Hugging Face Daily Papers": "https://huggingface.co/papers"
+  }
+}

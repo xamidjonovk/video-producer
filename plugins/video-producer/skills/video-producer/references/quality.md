@@ -1,0 +1,8 @@
+# Video quality and production preferences
+
+- Derive the audience and language from the brief and source material. Keep speech and visible captions faithful to the original meaning. Listen for names, pronunciation, technical terms and digits in the final mix.
+- Preserve a real face and performance for direct-to-camera material. For generated narrative keep the character's face, proportions, wardrobe, objects, screen direction and eye line consistent across adjacent clips.
+- Choose a clear first frame, a meaningful action and a readable setup. Favor a modern, natural commercial look, plausible camera movement and textured footage. Use clean edges and believable light rather than excessive sharpening, broad smoothing or decorative effects.
+- Inspect source and final media on the target aspect ratio. In Resolve balance cuts in exposure, color temperature and skin tone before applying a common look. Preserve color space and check the SDR export when HDR footage is used. Check captions on a small screen and away from interface controls.
+- Listen at normal speed and inspect precise timestamps. Check sharpness, motion consistency, ghosting, subtitle timing, sound transitions, artificial accent and lip sync. Keep dialogue, ambience, music and effects editable where possible. Record `pass`, `fix` or `unverified` with the evidence. When only a contact sheet or transcript is available, mark motion and lip sync `unverified`.
+- Match framing and sound of new inserts manually if needed. Compare the difficult shot to the reference and neighboring shots before spending on replacements. A blurry or inconsistent result may require a new source or fresh take. Do not count an upscale as restored true detail.

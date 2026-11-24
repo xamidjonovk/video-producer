@@ -1,0 +1,17 @@
+{
+  "name": "video-producer",
+  "plugins": [
+    {
+      "name": "video-producer",
+      "source": {
+        "source": "local",
+        "path": "./plugins/video-producer"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_USE"
+      },
+      "category": "Design"
+    }
+  ]
+}

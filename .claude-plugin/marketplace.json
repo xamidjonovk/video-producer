@@ -1,0 +1,11 @@
+{
+  "name": "video-producer",
+  "owner": { "name": "Video Producer contributors" },
+  "plugins": [
+    {
+      "name": "video-producer",
+      "source": "./plugins/video-producer",
+      "description": "Route video briefs to the right editing, animation, recording, or generation workflow."
+    }
+  ]
+}
