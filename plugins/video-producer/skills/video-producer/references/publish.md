@@ -1,0 +1,5 @@
+# Draft and publishing
+
+Build the local draft from the final MP4 and the requested caption and cover. The draft JSON records the platform, account and content hashes. Keep the SRT and editable source with the video. If a platform account is connected and the user has approved the exact media, destination and copy, use the official connector or its native publishing workflow. Include Trial Reel mode and AI disclosure when applicable and requested. Verify the returned post URL and status.
+
+For scheduled uploads, use the approved time and timezone with a supported native scheduler or connector. When the host uses scheduled tasks, check that the final MP4 is available at runtime and that the platform action and account are authorized. Report the saved schedule or deliver the ready draft if the connection cannot schedule it. Weekly research reports can use the host's scheduled tasks and the project's watchlist. Include source links, visible sample metrics, original hook ideas and what to test this week.

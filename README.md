@@ -61,6 +61,18 @@ python <skill>/vp.py studio <project> render jobs/reel-01 --plan clean-edit.json
 
 The FFmpeg setup reuses the current binary, or installs a pinned FFmpeg wheel into an isolated environment inside the project. Supply `VIDEO_AGENT_FFMPEG` and `VIDEO_AGENT_FFPROBE` to use existing binaries that are off PATH. HTML and React renderers require Node.js 22+ and prepare separately. Local transcription uses the project's Python environment and downloads the selected model on first use. The agent can apply the official install recipes for optional desktop tools when a specific task calls for them. [Tool selection and setup](plugins/video-producer/skills/video-producer/references/tools.md), [specialist tools](plugins/video-producer/skills/video-producer/references/specialists.md).
 
+### References and finishing
+
+Give the agent an Instagram profile, YouTube channel, or individual video link as part of a normal brief. It samples public metadata, records access status and uses local footage or an authorized connector for visual and audio analysis. The relevant commands prepare yt-dlp, PySceneDetect, and Earshot on first use if needed.
+
+```text
+python <skill>/vp.py reference <project> "https://www.youtube.com/@OpenAI/shorts" --limit 8
+python <skill>/vp.py scenes <project> <source> <job>/inspection
+python <skill>/vp.py sfx <project> "a soft paper rustle" <job>/assets/paper.wav
+```
+
+New edit plans support Rec.709 SDR delivery, tagged HDR tone mapping, clip-level grade controls, timed sound layers, music ducking, and measured AAC loudness and true peak. The technical report records the measured output. Use playback to check the picture and mix. [Online references](plugins/video-producer/skills/video-producer/references/online.md), [finishing guide](plugins/video-producer/skills/video-producer/references/finishing.md), [publishing workflow](plugins/video-producer/skills/video-producer/references/publish.md).
+
 ## External accounts and media
 
 Higgsfield, ElevenLabs, vidIQ and other account-based connectors use the host's official connection flow. Paid generations use the project budget and a live quote. Add personal research handles in your own project's `watchlist.local.json` with the structure of the bundled [watchlist](plugins/video-producer/skills/video-producer/watchlist.json).

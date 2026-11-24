@@ -1,5 +1,5 @@
 {
   "name": "video-producer",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Produce editable videos with local tools and on-demand renderers."
 }

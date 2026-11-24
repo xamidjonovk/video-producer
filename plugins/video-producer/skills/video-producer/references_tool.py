@@ -32,14 +32,14 @@ def canonical_url(raw):
         if YOUTUBE_ID.fullmatch(video):
             return 'https://www.youtube.com/watch?' + urlencode({'v': video})
         if host in youtube and (re.fullmatch(r'@[\w.-]+', first) or
-                                (first in ('channel', 'c', 'user') and len(segments) == 2 and
+                                (first in ('channel', 'c', 'user') and len(segments) in (2, 3) and
                                  re.fullmatch(r'[\w.-]+', segments[1]))):
             return 'https://www.youtube.com/' + '/'.join(segments[:1 if first.startswith('@') else 2])
     if host in ('instagram.com', 'www.instagram.com', 'm.instagram.com'):
         if first in ('p', 'reel', 'reels', 'tv') and len(segments) == 2 and INSTAGRAM_ID.fullmatch(segments[1]):
             route = 'reel' if first == 'reels' else first
             return f'https://www.instagram.com/{route}/{segments[1]}/'
-        if len(segments) == 1 and re.fullmatch(r'[A-Za-z0-9_.]{1,30}', first) and first not in (
+        if (len(segments) == 1 or len(segments) == 2 and segments[1] == 'reels') and re.fullmatch(r'[A-Za-z0-9_.]{1,30}', first) and first not in (
                 'accounts', 'explore', 'reels', 'reel', 'p', 'tv', 'direct', 'about'):
             return f'https://www.instagram.com/{first}/'
     raise ValueError('Unsupported link. Use a public Reel, post, profile, YouTube video or channel URL.')
@@ -101,7 +101,7 @@ def record(root, items, source):
     return key
 
 
-def process(args):
+def process(args, emit=True):
     project = args.project.resolve(strict=True)
     if not project.is_dir():
         raise ValueError('The project must be a directory.')
@@ -140,7 +140,9 @@ def process(args):
                     file.write(f"# Video reference\n\n{entry['url']}\n\nAnalysis pending.\n")
             except FileExistsError:
                 pass
-    print(json.dumps({'index': str(index_path), 'references': [items[key] for key in keys]}, ensure_ascii=False))
+    result = [items[key] for key in keys]
+    if emit:
+        print(json.dumps({'index': str(index_path), 'references': result}, ensure_ascii=False))
     if args.inspect:
         for key in keys:
             entry = items[key]
@@ -150,6 +152,7 @@ def process(args):
             if source.suffix.lower() in MEDIA_SUFFIXES and source.is_relative_to(root):
                 directory(root / 'inspection' / key, root)
                 inspect(argparse.Namespace(job=root, source=source, slug=key))
+    return result
 
 
 def main():

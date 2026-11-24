@@ -3,6 +3,7 @@
 import argparse
 import json
 import os
+import platform
 import shutil
 import subprocess
 import sys
@@ -16,6 +17,9 @@ SKILL = Path(__file__).resolve().parent
 HYPERFRAMES_VERSION = "0.9.86"
 FFMPEG_FALLBACK = "imageio-ffmpeg==0.6.0"
 TRANSCRIBER = "faster-whisper==1.2.1"
+YT_DLP = "yt-dlp[default]==2026.11.23"
+SCENEDETECT = "scenedetect[opencv-headless]==0.6.7.1"
+EARSHOT = "earshot @ git+https://github.com/Leonxlnx/earshot@7a7f7c5c70d4a763a1eca4b3666af7c77e313f97"
 PACKAGES = {"hyperframes": "hyperframes", "remotion": "@remotion/cli"}
 
 
@@ -62,6 +66,58 @@ def transcriber_ready(project):
     result = subprocess.run([str(executable), "-c", "from faster_whisper import WhisperModel"],
                             capture_output=True, check=False)
     return result.returncode == 0
+
+
+def module_command(project, module):
+    for executable in (local_python(project), Path(sys.executable)):
+        if not executable.is_file():
+            continue
+        result = subprocess.run([str(executable), "-m", module, "--version"],
+                                capture_output=True, check=False)
+        if result.returncode == 0:
+            return [str(executable), "-m", module]
+    command = shutil.which(module.replace("_", "-"))
+    return [command] if command else None
+
+
+def prepare_module(project, module, package):
+    command = module_command(project, module)
+    if not command:
+        install_python_package(project, package)
+        command = module_command(project, module)
+    if not command:
+        raise ValueError(f"{module} was installed but could not start.")
+    return command
+
+
+def earshot_path(project):
+    folder = local_python(project).parent
+    executable = folder / ("earshot.exe" if os.name == "nt" else "earshot")
+    return str(executable) if executable.is_file() else shutil.which("earshot")
+
+
+def prepare_earshot(project):
+    executable = earshot_path(project)
+    if not executable:
+        if not shutil.which("git"):
+            raise ValueError("Earshot setup requires Git.")
+        install_python_package(project, EARSHOT)
+        executable = earshot_path(project)
+    if not executable:
+        raise ValueError("Earshot was installed but its CLI is unavailable.")
+    subprocess.run([executable, "--help"], capture_output=True, check=True)
+    return executable
+
+
+def prepare_openscreen():
+    commands = {
+        "Windows": ("winget", "install", "--source", "msstore", "OpenScreen"),
+        "Darwin": ("brew", "install", "--cask", "openscreen"),
+    }
+    command = commands.get(platform.system())
+    if not command or not shutil.which(command[0]):
+        raise ValueError("Use the official OpenScreen installer at https://github.com/getopenscreen/openscreen/releases.")
+    subprocess.run([shutil.which(command[0]), *command[1:]], check=True)
 
 
 def prepare_ffmpeg(project):
@@ -145,8 +201,13 @@ def run_engine(project, engine, arguments):
     directory = engine_directory(project, engine)
     command = engine_bin(directory, engine)
     node = shutil.which("node")
-    if not command or not node:
-        raise ValueError(f"Run prepare for {engine} in this project first.")
+    if not command:
+        prepare_renderer(project, engine)
+        command = engine_bin(directory, engine)
+    if not node or not command:
+        raise ValueError(f"{engine} requires a working Node.js 22+ runtime.")
+    if engine == "hyperframes":
+        prepare_ffmpeg(project)
     environment = studio_environment(project)
     if engine == "hyperframes":
         encoder = environment.get("VIDEO_AGENT_FFMPEG")
@@ -175,17 +236,31 @@ def doctor(project):
         "remotion_ready": engine_bin(engine_directory(project, "remotion"), "remotion") is not None,
         "effectcraft_cli": shutil.which("effectcraft-cli"),
         "transcriber_ready": transcriber_ready(project),
+        "yt_dlp_ready": module_command(project, "yt_dlp") is not None,
+        "scenedetect_ready": module_command(project, "scenedetect") is not None,
+        "earshot": earshot_path(project),
     }, indent=2))
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
-    for name in ("doctor", "plan", "prepare", "studio", "engine", "transcribe"):
+    for name in ("doctor", "plan", "prepare", "studio", "engine", "transcribe", "reference", "scenes", "sfx"):
         command = commands.add_parser(name)
         command.add_argument("project", type=Path)
         if name == "prepare":
-            command.add_argument("engine", choices=("ffmpeg", "transcription", *PACKAGES))
+            command.add_argument("engine", choices=("ffmpeg", "transcription", "yt-dlp", "scenedetect",
+                                                   "earshot", "openscreen", *PACKAGES))
+        if name == "reference":
+            command.add_argument("url")
+            command.add_argument("--limit", type=int, default=8)
+            command.add_argument("--download-authorized", action="store_true")
+        if name == "scenes":
+            command.add_argument("source", type=Path)
+            command.add_argument("output", type=Path)
+        if name == "sfx":
+            command.add_argument("description")
+            command.add_argument("output", type=Path)
         if name == "plan":
             command.add_argument("workflows", choices=WORKFLOWS, nargs="+")
         if name == "engine":
@@ -201,9 +276,48 @@ def main():
             doctor(project)
         elif args.command == "plan":
             print(json.dumps(production_plan(args.workflows), indent=2))
+        elif args.command == "reference":
+            from online_references import canonical_url, collect, video_url
+
+            if args.download_authorized and not video_url(canonical_url(args.url)):
+                raise ValueError("Use a single authorized video URL for media retrieval.")
+            canonical_url(args.url)
+            if not 1 <= args.limit <= 30:
+                raise ValueError("Use a sample size from 1 to 30.")
+            return collect(project, args.url, args.limit, prepare_module(project, "yt_dlp", YT_DLP),
+                           args.download_authorized, ffmpeg(project) if args.download_authorized else None)
+        elif args.command == "scenes":
+            source = (project / args.source).resolve(strict=True)
+            output = (project / args.output).resolve()
+            if not source.is_file() or not output.is_relative_to(project):
+                raise ValueError("Supply a media file and an output directory inside the project.")
+            output.mkdir(parents=True, exist_ok=True)
+            command = prepare_module(project, "scenedetect", SCENEDETECT)
+            subprocess.run([*command, "--input", str(source), "--output", str(output),
+                            "detect-content", "list-scenes"], cwd=project, check=True)
+        elif args.command == "sfx":
+            output = (project / args.output).resolve()
+            if output.suffix.lower() != ".wav" or output.exists() or not output.is_relative_to(project):
+                raise ValueError("Choose a new .wav output inside the project.")
+            if args.description.startswith("-"):
+                raise ValueError("Start the sound description with a word.")
+            output.parent.mkdir(parents=True, exist_ok=True)
+            subprocess.run([prepare_earshot(project), "make", args.description, "-o", str(output)],
+                           cwd=project, check=True)
+            if not output.is_file():
+                raise ValueError("Earshot did not create the expected file.")
+            print(output)
         elif args.command == "prepare":
             if args.engine == "ffmpeg":
                 print(prepare_ffmpeg(project))
+            elif args.engine == "yt-dlp":
+                print(prepare_module(project, "yt_dlp", YT_DLP))
+            elif args.engine == "scenedetect":
+                print(prepare_module(project, "scenedetect", SCENEDETECT))
+            elif args.engine == "earshot":
+                print(prepare_earshot(project))
+            elif args.engine == "openscreen":
+                prepare_openscreen()
             elif args.engine == "transcription":
                 if not transcriber_ready(project):
                     install_python_package(project, TRANSCRIBER)
@@ -215,11 +329,16 @@ def main():
                     prepare_ffmpeg(project)
                 print(prepare_renderer(project, args.engine))
         elif args.command == "studio":
+            if args.arguments and args.arguments[0] in ("inspect", "clean", "render", "draft"):
+                if not any(argument in ("-h", "--help") for argument in args.arguments):
+                    prepare_ffmpeg(project)
             return subprocess.call([sys.executable, str(SKILL / "studio.py"), *args.arguments], cwd=project,
                                    env=studio_environment(project))
         elif args.command == "transcribe":
             if not transcriber_ready(project):
-                raise ValueError("Run prepare with transcription for this project first.")
+                install_python_package(project, TRANSCRIBER)
+            if not transcriber_ready(project):
+                raise ValueError("Local transcription could not start in the project Python environment.")
             return subprocess.call([str(local_python(project)), str(SKILL / "speech.py"), *args.arguments],
                                    cwd=project)
         else:

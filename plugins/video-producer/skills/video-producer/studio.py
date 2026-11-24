@@ -10,6 +10,9 @@ import sys
 import tempfile
 from pathlib import Path
 
+from finishing import (REC709_TAGS, TRACK_GAINS, color_filters, color_source, loudness_filter,
+                       measure_loudness, measure_picture)
+
 
 MODES = ('auto', 'motion', 'cinematic', 'broll', 'iphone', 'repurpose')
 PROFILES = {'reels': (1080, 1920), 'shorts': (1080, 1920), 'youtube': (1920, 1080)}
@@ -97,7 +100,8 @@ def init(args):
     for name, data in {
         'brief.json': {'mode': args.mode, 'platform': args.profile, 'language': 'uz', 'goal': ''},
         'script.json': {'hook': '', 'scenes': []},
-        'edit.json': {'profile': args.profile, 'fps': 30, 'clips': [], 'audio': [], 'subtitles': None},
+        'edit.json': {'profile': args.profile, 'fps': 30, 'clips': [], 'audio': [], 'subtitles': None,
+                      'color': {'hdr_to_sdr': True}, 'master': {'lufs': -16, 'true_peak': -1}},
     }.items():
         path = args.job / name
         if not path.exists():
@@ -188,20 +192,22 @@ def clean(args):
         clips.append({'file': str(source), 'start': cursor, 'end': info['duration']})
     if not clips or sum(clip['end'] - clip['start'] for clip in clips) < 1:
         raise ValueError('Saqlash uchun yetarli ovoz aniqlanmadi. Audio va noise-db qiymatini tekshiring.')
-    save_json(job / 'clean-edit.json', {'profile': plan['profile'], 'fps': fps,
-              'clips': clips, 'audio': [], 'subtitles': None})
+    save_json(job / 'clean-edit.json', {**plan, 'fps': fps, 'clips': clips, 'audio': [], 'subtitles': None})
     save_json(job / 'pause-review.json', {'source': str(source), 'removed_ranges_seconds': removals})
     print(job / 'clean-edit.json')
 
 
-def normalize_clip(job, clip, fps, size, destination):
+def normalize_clip(job, clip, fps, size, destination, color):
     path = media_path(job, clip['file'])
     meta = probe(path)
     if not meta['width'] or not meta['duration']:
         raise ValueError(f'Video manbasi tekshiruvdan o‘tmadi: {path}')
-    details = json.dumps(meta['video']).lower()
-    if any(value in details for value in ('smpte2084', 'arib-std-b67', 'dolby vision', 'dovi configuration')):
-        raise ValueError(f'HDR manba uchun Resolve’da SDR proksi tayyorlang: {path}')
+    source_color = color_source(meta['video'])
+    grade = {**color.get('grade', {}), **clip.get('grade', {})}
+    try:
+        correction = color_filters(meta['video'], grade, number, color.get('hdr_to_sdr', False))
+    except ValueError as error:
+        raise ValueError(f'{path.name}: {error}') from error
     start = number(clip.get('start', 0), 'clip.start')
     end = number(clip.get('end', meta['duration']), 'clip.end')
     if end <= start or end > meta['duration'] + 0.04:
@@ -211,7 +217,8 @@ def normalize_clip(job, clip, fps, size, destination):
         raise ValueError(f'Kesim bir kadrdan qisqa: {path.name}')
     duration = frames / fps
     gain = number(clip.get('gain', 1), 'clip.gain', 0, 4)
-    video_filter = f'{geometry(*size, clip.get("fit", "fit"))},setsar=1,fps={fps},tpad=stop_mode=clone:stop_duration=1'
+    framing = geometry(*size, clip.get('fit', 'fit'))
+    video_filter = ','.join([*correction, framing, f'setsar=1,fps={fps},tpad=stop_mode=clone:stop_duration=1'])
     inputs = ['-ss', f'{start:.6f}', '-i', path]
     audio_map = '0:a:0'
     if not meta['audio'] or gain == 0:
@@ -219,37 +226,82 @@ def normalize_clip(job, clip, fps, size, destination):
         audio_map = '1:a:0'
     ffmpeg(*inputs, '-map', '0:v:0', '-map', audio_map, '-t', f'{duration:.8f}',
            '-vf', video_filter, '-af', f'volume={gain:g},apad',
-           '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '17', '-pix_fmt', 'yuv420p',
+           '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '17', '-pix_fmt', 'yuv420p', *REC709_TAGS,
            '-c:a', 'pcm_s16le', '-ar', '48000', '-ac', '2', destination)
-    return duration
+    return duration, {'source': path.name, 'color_source': source_color, 'grade': grade}
 
 
 def assemble(job, plan, stage, output, duration):
     filters = []
     inputs = ['-f', 'concat', '-safe', '1', '-i', 'clips.txt']
-    count = 1
+    music = []
+    dialogue = ['[0:a]']
+    effects = []
     for index, track in enumerate(plan.get('audio', []), 1):
         start = number(track.get('start', 0), 'audio.start')
         seconds = number(track.get('duration', duration - start), 'audio.duration', 0.001)
-        gain = number(track.get('gain', 0.18), 'audio.gain', 0, 4)
+        role = track.get('role')
+        if role is not None and role not in TRACK_GAINS:
+            raise ValueError(f'Unknown audio role: {role}')
+        gain = number(track.get('gain', TRACK_GAINS.get(role, 0.18)), 'audio.gain', 0, 4)
         if start >= duration:
             raise ValueError('Audio treki video tugaganidan keyin boshlanmoqda.')
         if track.get('loop', False):
             inputs += ['-stream_loop', '-1']
         inputs += ['-i', media_path(job, track['file'])]
-        filters.append(f'[{index}:a]aresample=48000,aformat=channel_layouts=stereo,'
-                       f'atrim=duration={min(seconds, duration - start):.6f},asetpts=PTS-STARTPTS,'
-                       f'volume={gain:g},adelay={round(start * 1000)}:all=1[a{index}]')
-        count += 1
+        length = min(seconds, duration - start)
+        offset = number(track.get('source_start', 0), 'audio.source_start')
+        fade_in = number(track.get('fade_in', 0), 'audio.fade_in', 0, length)
+        fade_out = number(track.get('fade_out', 0), 'audio.fade_out', 0, length - fade_in)
+        chain = [f'[{index}:a]aresample=48000', 'aformat=channel_layouts=stereo',
+                 f'atrim=start={offset:.6f}:duration={length:.6f}', 'asetpts=PTS-STARTPTS', f'volume={gain:g}']
+        if fade_in:
+            chain.append(f'afade=t=in:d={fade_in:.6f}')
+        if fade_out:
+            chain.append(f'afade=t=out:st={length - fade_out:.6f}:d={fade_out:.6f}')
+        label = f'[a{index}]'
+        chain.append(f'adelay={round(start * 1000)}:all=1{label}')
+        filters.append(','.join(chain))
+        if role == 'music':
+            music.append(label)
+        elif role == 'dialogue':
+            dialogue.append(label)
+        else:
+            effects.append(label)
     audio_map = '0:a:0'
+    duck = bool(music and (plan.get('master') or {}).get('duck_music', True))
+    if duck:
+        filters.append(f'{"".join(dialogue)}amix=inputs={len(dialogue)}:duration=first:normalize=0,'
+                       'asplit=2[front][side]')
+        filters.append(f'{"".join(music)}amix=inputs={len(music)}:duration=longest:normalize=0,'
+                       f'apad,atrim=duration={duration:.8f}[bed]')
+        filters.append('[bed][side]sidechaincompress=threshold=0.025:ratio=6:attack=30:release=330[ducked]')
+        dialogue = ['[front]']
+        music = ['[ducked]']
     if filters:
-        labels = ''.join(f'[a{index}]' for index in range(1, count))
-        filters.append(f'[0:a]{labels}amix=inputs={count}:duration=first:normalize=0,'
+        labels = dialogue + effects + music
+        filters.append(f'{"".join(labels)}amix=inputs={len(labels)}:duration=first:normalize=0,'
                        'alimiter=limit=0.95:level=false:latency=1[aout]')
         audio_map = '[aout]'
-    audio_args = ['-c:a', 'aac', '-b:a', '192k']
+    master = plan.get('master')
+    mastering = None
+    if master is not None:
+        target = number(master.get('lufs', -16), 'master.lufs', -30, -9)
+        peak = number(master.get('true_peak', -1), 'master.true_peak', -8, -0.1)
+        mix = stage / 'mix.wav'
+        graph = ['-filter_complex', ';'.join(filters)] if filters else []
+        ffmpeg(*inputs, *graph, '-map', audio_map, '-t', f'{duration:.8f}', '-c:a', 'pcm_f32le', mix, cwd=stage)
+        measured = measure_loudness(run, command_path('ffmpeg'), mix, target, peak)
+        inputs = ['-f', 'concat', '-safe', '1', '-i', 'clips.txt', '-i', mix]
+        filters = []
+        audio_map = '1:a:0'
+        mastering = {'target_lufs': target, 'true_peak_limit_dbtp': peak, 'ducked_music': duck,
+                     'premaster': measured}
+    audio_args = ['-c:a', 'aac', '-b:a', '192k', '-ar', '48000']
     if filters:
         audio_args += ['-filter_complex', ';'.join(filters)]
+    if mastering and mastering['premaster']['input_i'] is not None:
+        audio_args += ['-af', loudness_filter(target, peak - 0.7, mastering['premaster'])]
     video_args = ['-c:v', 'copy']
     if plan.get('subtitles'):
         source = media_path(job, plan['subtitles'])
@@ -259,8 +311,16 @@ def assemble(job, plan, stage, output, duration):
         style = 'FontName=Arial,FontSize=17,Outline=2,Shadow=0,Alignment=2,MarginV=45'
         video_args = ['-vf', f"subtitles=filename=captions.srt:force_style='{style}'", '-c:v', 'libx264',
                       '-preset', 'veryfast', '-crf', '17', '-pix_fmt', 'yuv420p']
-    ffmpeg(*inputs, '-map', '0:v:0', *audio_args, '-map', audio_map, *video_args,
+    ffmpeg(*inputs, '-map', '0:v:0', *audio_args, '-map', audio_map, *video_args, *REC709_TAGS,
            '-t', f'{duration:.8f}', '-movflags', '+faststart', output, cwd=stage)
+    if mastering:
+        measured = measure_loudness(run, command_path('ffmpeg'), output, target, peak)
+        integrated, true_peak = measured['input_i'], measured['input_tp']
+        mastering['export'] = measured
+        mastering['status'] = ('no_measurable_audio' if integrated is None else 'review'
+                               if abs(integrated - target) > 1.5 or true_peak is None or true_peak > peak + 0.1
+                               else 'pass')
+    return mastering
 
 
 def render(args):
@@ -277,11 +337,12 @@ def render(args):
     with tempfile.TemporaryDirectory(prefix='render-', dir=exports) as directory:
         stage = Path(directory)
         names = [f'clip-{index:04}.mov' for index in range(len(plan['clips']))]
-        duration = sum(normalize_clip(job, clip, fps, PROFILES[profile], stage / name)
-                       for clip, name in zip(plan['clips'], names, strict=True))
+        clips = [normalize_clip(job, clip, fps, PROFILES[profile], stage / name, plan.get('color', {}))
+                 for clip, name in zip(plan['clips'], names, strict=True)]
+        duration = sum(length for length, _ in clips)
         (stage / 'clips.txt').write_text(''.join(f"file '{name}'\n" for name in names), encoding='ascii')
         output = stage / 'final.mp4'
-        assemble(job, plan, stage, output, duration)
+        mastering = assemble(job, plan, stage, output, duration)
         result = probe(output)
         if (result['width'], result['height']) != PROFILES[profile] or not result['audio']:
             raise ValueError('Eksportning kadr o‘lchami yoki audio oqimi mos kelmadi.')
@@ -290,6 +351,10 @@ def render(args):
         ffmpeg('-xerror', '-i', output, '-f', 'null', '-')
         result['technical_check'] = 'decoded'
         result['editorial_review'] = 'pending'
+        result['color'] = {'output': 'Rec.709 SDR', 'clips': [review for _, review in clips],
+                           'picture': measure_picture(run, command_path('ffmpeg'), output)}
+        if mastering:
+            result['audio_master'] = mastering
         save_json(stage / 'technical-review.json', result)
         output.replace(exports / 'final.mp4')
         (stage / 'technical-review.json').replace(exports / 'technical-review.json')
