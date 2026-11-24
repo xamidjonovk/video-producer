@@ -75,6 +75,10 @@ New edit plans support Rec.709 SDR delivery, tagged HDR tone mapping, clip-level
 
 ## External accounts and media
 
+### Presenter cloning from footage
+
+Ask the agent to make your existing talking-head video deliver a new script in your own voice. Version 0.5.0 prepares an original video excerpt and a separate approved voice track for **Sync Lipsync 3**. It uses the real on-camera performance as the visual input. The local preparation command has no generation cost. The workflow checks which provider surface exposes the exact model, verifies its quote, and tests a short take before the full edit. [Workflow and tutorial notes](plugins/video-producer/skills/video-producer/references/presenter-clone.md).
+
 ### Spend less on revisions
 
 Version 0.4.0 bundles **Higgsfield Shots** for projects that need generated footage. Both marketplace hosts and the local installer include it alongside Video Producer. A brief can mix an existing performance with a single generated insert. Keep the original dialogue, approve the hardest shot first, and fix trim, captions, color or sound on the accepted take in the editor. [Shot direction and credit receipts](plugins/video-producer/skills/higgsfield-shots/SKILL.md).

@@ -13,7 +13,7 @@ SKILL = Path(__file__).resolve().parents[1] / "plugins/video-producer/skills/vid
 sys.path.insert(0, str(SKILL))
 
 from online_references import collect
-from studio import command_path
+from studio import command_path, probe, sha256
 
 
 class ReferenceWorkflowTests(unittest.TestCase):
@@ -61,6 +61,30 @@ class FinishingWorkflowTests(unittest.TestCase):
     def call(self, *arguments):
         result = subprocess.run(list(map(str, arguments)), text=True, capture_output=True, encoding="utf-8")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_presenter_pair_trims_both_sources_and_keeps_the_original_performance_file(self):
+        ffmpeg = command_path("ffmpeg")
+        with tempfile.TemporaryDirectory() as folder:
+            project = Path(folder)
+            source = project / "original.mp4"
+            speech = project / "new-voice.wav"
+            self.call(ffmpeg, "-v", "error", "-f", "lavfi", "-i", "testsrc2=s=180x320:r=25:d=3",
+                      "-f", "lavfi", "-i", "sine=f=200:d=3", "-c:v", "libx264", "-c:a", "aac", source)
+            self.call(ffmpeg, "-v", "error", "-f", "lavfi", "-i", "sine=f=730:d=3", speech)
+            originals = [sha256(source), sha256(speech)]
+            cmd = [sys.executable, SKILL / "vp.py", "lipsync-prep", project, source, speech]
+            self.call(*cmd, "job/pair", "--video-start", 0.6, "--audio-start", 0.2, "--seconds", 1.64)
+            pair = project / "job/pair"
+            record = json.loads((pair / "inputs.json").read_text(encoding="utf-8"))
+            self.assertEqual((record["video"]["start"], record["audio"]["start"]), (0.6, 0.2))
+            picture = probe(pair / "presenter.mp4")
+            self.assertEqual((picture["width"], picture["height"], picture["audio"]), (180, 320, False))
+            self.assertAlmostEqual(picture["duration"], 1.64, delta=0.04)
+            self.assertAlmostEqual(probe(pair / "speech.wav")["duration"], 1.64, delta=0.02)
+            short = subprocess.run([*map(str, cmd), "job/invalid", "--seconds", "4"], capture_output=True)
+            self.assertNotEqual(short.returncode, 0)
+            self.assertFalse((project / "job/invalid").exists())
+            self.assertEqual([sha256(source), sha256(speech)], originals)
 
     def test_local_export_checks_hdr_grade_and_audio_master(self):
         ffmpeg = command_path("ffmpeg")

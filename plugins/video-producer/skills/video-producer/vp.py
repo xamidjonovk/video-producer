@@ -245,7 +245,8 @@ def doctor(project):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
-    for name in ("doctor", "plan", "prepare", "studio", "engine", "transcribe", "reference", "scenes", "sfx"):
+    for name in ("doctor", "plan", "prepare", "studio", "engine", "transcribe", "reference", "scenes", "sfx",
+                 "lipsync-prep"):
         command = commands.add_parser(name)
         command.add_argument("project", type=Path)
         if name == "prepare":
@@ -262,6 +263,13 @@ def main():
         if name == "sfx":
             command.add_argument("description")
             command.add_argument("output", type=Path)
+        if name == "lipsync-prep":
+            command.add_argument("video", type=Path)
+            command.add_argument("audio", type=Path)
+            command.add_argument("output", type=Path, help="New directory for the paired video and audio.")
+            command.add_argument("--seconds", type=float, required=True)
+            command.add_argument("--video-start", type=float, default=0)
+            command.add_argument("--audio-start", type=float, default=0)
         if name == "plan":
             command.add_argument("workflows", choices=WORKFLOWS, nargs="+")
         if name == "engine":
@@ -277,6 +285,11 @@ def main():
             doctor(project)
         elif args.command == "plan":
             print(json.dumps(production_plan(args.workflows), indent=2))
+        elif args.command == "lipsync-prep":
+            from presenter import prepare_pair
+
+            output = prepare_pair(project, args, prepare_ffmpeg(project))
+            print(output)
         elif args.command == "reference":
             from online_references import canonical_url, collect, video_url
 

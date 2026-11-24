@@ -63,7 +63,7 @@ def ffmpeg(*args, cwd=None):
     return run(command_path('ffmpeg'), '-nostdin', '-hide_banner', '-loglevel', 'error', '-y', *args, cwd=cwd)
 
 
-def probe(path):
+def probe(path, encoder=None):
     executable = command_path('ffprobe')
     if executable:
         result = run(executable, '-v', 'error', '-show_format', '-show_streams', '-of', 'json', path)
@@ -78,7 +78,7 @@ def probe(path):
         return {'duration': float(duration) if duration not in ('N/A', None) else 0,
                 'audio': any(stream['codec_type'] == 'audio' for stream in streams),
                 'width': width, 'height': height, 'video': video}
-    result = run(command_path('ffmpeg'), '-hide_banner', '-i', path, checked=False)
+    result = run(encoder or command_path('ffmpeg'), '-hide_banner', '-i', path, checked=False)
     info = result.stderr
     duration = re.search(r'Duration: (\d+):(\d+):(\d+(?:\.\d+)?)', info)
     video = next((line for line in info.splitlines() if 'Video:' in line), '')

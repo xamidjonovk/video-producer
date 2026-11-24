@@ -7,6 +7,8 @@ description: Direct, quote, review or repair individual AI-generated shots when 
 
 Follow the active host's connector schema. For a named preset use the provider's preset route. A research or price request ends at the findings or quote.
 
+For lip sync on an authorized existing presenter video, use the [presenter cloning workflow](../video-producer/references/presenter-clone.md). It uses the original moving footage and audio as the two inputs to Sync Lipsync 3.
+
 ## Before the first paid take
 
 - Lay out the edit with the actual dialogue and existing footage. Mark only the gaps that need generated movement. Choose a representative beat that tests the hardest requirement and can be used in the final cut. Match final aspect, motion and resolution whenever they matter to acceptance.
