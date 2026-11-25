@@ -5,7 +5,9 @@ description: Direct, quote, review or repair individual AI-generated shots when 
 
 # Higgsfield Shots
 
-Follow the active host's connector schema. For a named preset use the provider's preset route. A research or price request ends at the findings or quote.
+Follow the active host's connector schema. For a named preset use the provider's preset route and confirm it honors the user's chosen model before submission. A research or price request ends at the findings or quote.
+
+For final generated footage, explicitly set Higgsfield MAGI-2 (`magi_2`) unless the user requests another video model. Follow the [cinematic workflow](../video-producer/references/cinematic.md) for reusable references, MAGI-2 input modes and continuity. If the selected route cannot use the chosen model, flag the affected shot and continue with the available planning or editing work until the user chooses how to proceed.
 
 For lip sync on an authorized existing presenter video, use the [presenter cloning workflow](../video-producer/references/presenter-clone.md). It uses the original moving footage and audio as the two inputs to Sync Lipsync 3.
 
@@ -15,7 +17,7 @@ For lip sync on an authorized existing presenter video, use the [presenter cloni
 - Keep one small shot card in the job. Record its ID, usable duration and handles, frame size, opening pose, visible action and ending pose. Attach confirmed reference IDs with explicit roles. Reuse the same character, wardrobe, prop and location references across shots. Describe who handles each object, their screen position, eyeline and light direction. Attach only the references this shot uses.
 - Frame for the story. A medium shot shows a handoff, a reaction close-up shows the eyes, and a wide shot establishes geography. Give the actor one playable action and choose a camera move or a locked frame. Put optical and lighting controls in the supported settings. Use the prompt for what changes over time.
 - Example direction for a five-second vertical office shot: “Medium close-up. The manager sets the blue folder on the desk with her right hand, waits for the click of the latch, then looks left toward the door.” Keep the prop reference and side light from the previous shot. Record Foley separately when the mix needs control.
-- For dialogue, audition the real line first, especially Uzbek names, stress and vowels. Use an authorized native recording when available. Choose an audio-driven model if exact delivery is required and it accepts the track. Otherwise test native dialogue with one line. Check the first mouth closure, a stressed syllable and the last word at normal speed with sound. Preserve an accepted performance. Dubbing, inserting a reaction, or using an off-camera line must still serve the brief.
+- For dialogue, audition the real line first, especially Uzbek names, stress and vowels. Use an authorized native recording as a reference when the chosen model and shot mode accept it. Test a short native-dialogue take when needed. Check the first mouth closure, a stressed syllable and the last word at normal speed with sound. Preserve an accepted performance. Dubbing, inserting a reaction, or using an off-camera line must still serve the brief.
 
 ## Spend and resume
 

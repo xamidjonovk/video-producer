@@ -95,7 +95,10 @@ def probe(path, encoder=None):
 
 def init(args):
     args.job.mkdir(parents=True, exist_ok=True)
-    for name in ('assets', 'inspection', 'exports'):
+    folders = ('assets', 'inspection', 'exports')
+    if args.mode in ('cinematic', 'broll'):
+        folders += ('Character', 'Location', 'Props', 'generation')
+    for name in folders:
         (args.job / name).mkdir(exist_ok=True)
     for name, data in {
         'brief.json': {'mode': args.mode, 'platform': args.profile, 'language': 'uz', 'goal': ''},

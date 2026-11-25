@@ -16,7 +16,7 @@ Understand the intent semantically. Use these examples for orientation. File typ
 | “Explain this topic in under a minute” | `explainer` | Verify needed facts, write for speech, then choose the smallest compatible render and voice pipeline. |
 | “Camera moves through the whole piece in one take” | `one-shot` | Plan a continuous camera path and test seams. |
 | “Replace the background but keep hair natural” | `composite` | Preserve the take, test a matte and inspect edges in motion before all frames are processed. |
-| “Noldan zamonaviy cinematic rolik qil” | `cinematic` | Make original story beats, character reference plates, and a budgeted representative motion test as authorized. |
+| “Noldan cinematic film yoki qisqa drama qil” | `cinematic` | Follow the [cinematic workflow](cinematic.md). Build the script, reusable asset sheets and shot cards before quoting a representative MAGI-2 take. |
 | "Eski iPhone videomdagi yuzimni saqlab, yangi matnni o‘z ovozimda gapirtir" | `presenter-clone` | Lock the voice, select real footage, prepare a short pair, and route it to Sync Lipsync 3. |
 | “Find formats getting traction this week” | `trend-research` | Use current, comparable evidence and turn findings into original hooks. |
 | “Prepare it for Instagram or YouTube” | `publishing-draft` | Verify aspect ratio and caption, then prepare the MP4 and publication package. |

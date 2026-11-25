@@ -1,11 +1,11 @@
 {
   "name": "video-producer",
-  "version": "0.6.0",
-  "description": "Edit speech-led Reels with timed motion, real product footage and a dialogue-first mix.",
+  "version": "0.7.0",
+  "description": "Edit speech-led Reels and direct AI films with reusable references, timed shots and a dialogue-first mix.",
   "skills": "./skills/",
   "interface": {
     "displayName": "Video Producer",
-    "shortDescription": "Cut Reels with voice-led motion and B-roll.",
+    "shortDescription": "Edit voice-led Reels and direct AI films.",
     "category": "Design",
     "brandColor": "#FF795E",
     "composerIcon": "./assets/logo.png",

@@ -14,6 +14,7 @@ sys.path.insert(0, str(SKILL))
 
 from routing import production_plan
 from speech import make_srt
+from studio import init
 
 
 class VideoProducerTests(unittest.TestCase):
@@ -57,6 +58,27 @@ class VideoProducerTests(unittest.TestCase):
                  "rough-cut", "balance-dialogue", "verify", "package"]
         positions = [hybrid.index(step) for step in order]
         self.assertEqual(positions, sorted(positions))
+
+    def test_cinematic_plan_directs_shots_before_quoting_magi(self):
+        plan = {step["step"]: step["tools"] for step in production_plan(("cinematic",))}
+        order = list(plan)
+        self.assertLess(order.index("reference-plates"), order.index("direct-shots"))
+        self.assertLess(order.index("direct-shots"), order.index("quote-if-needed"))
+        self.assertTrue(any("magi_2" in tool for tool in plan["cut-or-generate"]))
+
+    def test_generated_job_folders_preserve_existing_job_files(self):
+        with tempfile.TemporaryDirectory() as path:
+            for mode in ("cinematic", "broll"):
+                with self.subTest(mode=mode):
+                    job = Path(path) / mode
+                    args = SimpleNamespace(job=job, mode=mode, profile="reels")
+                    init(args)
+                    folders = {item.name for item in job.iterdir() if item.is_dir()}
+                    self.assertTrue({"Character", "Location", "Props", "generation"} <= folders)
+                    approved = job / "script.json"
+                    approved.write_text('{"hook": "approved"}', encoding="utf-8")
+                    init(args)
+                    self.assertEqual(approved.read_text(encoding="utf-8"), '{"hook": "approved"}')
 
     def test_clip_captions_preserve_language_and_timing(self):
         items = [

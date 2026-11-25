@@ -72,7 +72,7 @@ python plugins/video-producer/skills/video-producer/vp.py studio . init jobs/ree
 
 - **Direct a Reel** with a worked 15-second example, two sample revision requests and a copyable brief. [O‘zbekcha qo‘llanma](docs/reels-uz.md)
 - **Work with a real presenter** from source selection through lip-sync review. [Presenter workflow](plugins/video-producer/skills/video-producer/references/presenter-clone.md)
-- **Direct a generated shot** with quotes, a spending limit and a receipt for each take. [Higgsfield Shots](plugins/video-producer/skills/higgsfield-shots/SKILL.md)
+- **Direct a generated film or shot** with reusable Soul Cinema character and location sheets, ImageGen props and MAGI-2 footage. [Cinematic workflow](plugins/video-producer/skills/video-producer/references/cinematic.md) · [Quotes and take receipts](plugins/video-producer/skills/higgsfield-shots/SKILL.md)
 - **Use references and finish the edit** with sourced footage, an audio pass and playback checks. [References](plugins/video-producer/skills/video-producer/references/online.md) · [Finishing](plugins/video-producer/skills/video-producer/references/finishing.md) · [Publishing](plugins/video-producer/skills/video-producer/references/publish.md)
 
 Code and templates use the [MIT license](LICENSE). Third-party tools and media are subject to their respective licenses. The filmstrip logo was created with OpenAI ImageGen. [Logo asset and creation prompt](docs/logo.md)
